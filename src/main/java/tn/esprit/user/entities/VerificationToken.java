@@ -23,7 +23,7 @@ public class VerificationToken {
 
     private Instant expiryDate;
 
-    public VerificationToken(String token, User user,VerificationTokenType verificationTokenType) {
+    public VerificationToken(String token, User user, VerificationTokenType verificationTokenType) {
         this.token = token;
         this.user = user;
         this.verificationTokenType = verificationTokenType;

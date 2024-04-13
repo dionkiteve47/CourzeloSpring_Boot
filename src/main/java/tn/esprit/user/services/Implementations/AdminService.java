@@ -35,7 +35,7 @@ public class AdminService implements IAdminService {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND + userID));
         boolean isEnabled = user.isEnabled();
-        user.setEnabled(!isEnabled);
+        user.getSecurity().setEnabled(!isEnabled);
         userRepository.save(user);
         String message = isEnabled ? "User disabled!" : "User enabled!";
         log.info(message + " :" + userID);
@@ -46,8 +46,8 @@ public class AdminService implements IAdminService {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND + userID));
 
-        boolean isBanned = user.getBan() != null && user.getBan();
-        user.setBan(!isBanned);
+        boolean isBanned = user.getSecurity().getBan() != null && user.getSecurity().getBan();
+        user.getSecurity().setBan(!isBanned);
         userRepository.save(user);
         String message = isBanned ? "User unbanned!" : "User banned!";
         log.info(message + " :" + userID);

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class CookieUtil {
     public ResponseCookie createAccessTokenCookie(String accessToken, Long duration) {
         return ResponseCookie.from("accessToken", accessToken)
-                .maxAge(duration / 1000000)
+                .maxAge(duration / 1000)
                 .httpOnly(true)
                 .path("/")
                 .build();
@@ -21,7 +21,7 @@ public class CookieUtil {
 
     public ResponseCookie createRefreshTokenCookie(String refreshToken, Long duration) {
         return ResponseCookie.from("refreshToken", refreshToken)
-                .maxAge(duration / 1000000)
+                .maxAge(duration / 1000)
                 .httpOnly(true)
                 .path("/")
                 .build();

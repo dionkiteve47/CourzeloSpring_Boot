@@ -7,6 +7,7 @@ import tn.esprit.user.entities.User;
 import tn.esprit.user.exceptions.DeviceNotFoundException;
 import tn.esprit.user.repositories.DeviceMetadataRepository;
 import tn.esprit.user.repositories.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -17,9 +18,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import tn.esprit.user.services.Interfaces.IDeviceMetadataService;
+import org.springframework.util.StringUtils;
 
 import java.security.Principal;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -33,14 +36,29 @@ public class DeviceMetadataService implements IDeviceMetadataService {
 
     @Override
     public void saveDeviceDetails(String device, User user) {
-        log.info("Saving Device...");
-        log.info("Device : " + device);
-        DeviceMetadata deviceMetadata = new DeviceMetadata();
-        deviceMetadata.setDeviceDetails(device);
-        deviceMetadata.setUser(user);
-        deviceMetadata.setLastLoggedIn(Instant.now());
-        deviceMetadataRepository.save(deviceMetadata);
-        log.info("Device Saved!");
+        if(isNewDevice(device, user)) {
+            log.info("Saving Device...");
+            log.info("Device : " + device);
+            DeviceMetadata deviceMetadata = new DeviceMetadata();
+            deviceMetadata.setDeviceDetails(device);
+            deviceMetadata.setUser(user);
+            deviceMetadata.setLastLoggedIn(Instant.now().plusSeconds(3600));
+            deviceMetadataRepository.save(deviceMetadata);
+            log.info("Device Saved!");
+        }
+    }
+
+    @Override
+    public void updateDeviceLastLogin(String userAgent, User user) {
+        log.info("Searching for Device...");
+        List<DeviceMetadata> devices = deviceMetadataRepository.findByUser(user);
+        for (DeviceMetadata device : devices) {
+            if (device.getDeviceDetails().equals(userAgent)) {
+                device.setLastLoggedIn(Instant.now().plusSeconds(3600));
+                deviceMetadataRepository.save(device);
+                log.info("Device updated!");
+            }
+        }
     }
 
     @Override
@@ -55,6 +73,35 @@ public class DeviceMetadataService implements IDeviceMetadataService {
         }
         log.info("Device not found!");
         return true;
+    }
+
+    private static final List<String> POSSIBLE_IP_HEADERS = List.of(
+            "X-Forwarded-For",
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP",
+            "HTTP_X_FORWARDED_FOR",
+            "HTTP_X_FORWARDED",
+            "HTTP_X_CLUSTER_CLIENT_IP",
+            "HTTP_CLIENT_IP",
+            "HTTP_FORWARDED_FOR",
+            "HTTP_FORWARDED",
+            "HTTP_VIA",
+            "REMOTE_ADDR"
+    );
+
+    public String getIpAddressFromHeader(HttpServletRequest request) {
+        for (String ipHeader : POSSIBLE_IP_HEADERS) {
+            String headerValue = Collections.list(request.getHeaders(ipHeader)).stream()
+                    .filter(StringUtils::hasLength)
+                    .findFirst()
+                    .orElse(null);
+
+            if (headerValue != null) {
+                return headerValue;
+            }
+        }
+
+        return null;
     }
 
     @Override

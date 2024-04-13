@@ -4,12 +4,11 @@ import tn.esprit.user.dtos.DeleteAccountDTO;
 import tn.esprit.user.dtos.PasswordDTO;
 import tn.esprit.user.dtos.ProfileDTO;
 import tn.esprit.user.dtos.UpdateEmailDTO;
+import tn.esprit.user.entities.Role;
 import tn.esprit.user.entities.User;
+import tn.esprit.user.exceptions.*;
 import tn.esprit.user.entities.VerificationToken;
 import tn.esprit.user.entities.VerificationTokenType;
-import tn.esprit.user.exceptions.PasswordResetTokenExpiredException;
-import tn.esprit.user.exceptions.PasswordResetTokenNotFoundException;
-import tn.esprit.user.exceptions.UserNotFoundException;
 import tn.esprit.user.repositories.UserRepository;
 import tn.esprit.user.repositories.VerificationTokenRepository;
 import tn.esprit.user.security.Response;
@@ -35,9 +34,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+
+import static tn.esprit.user.entities.Role.TEACHER;
+
 
 @Service
 @Slf4j
@@ -83,13 +86,13 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findUserByEmail(email);
         if (profileDTO.getName() != null && !profileDTO.getName().isEmpty()) {
             log.info("updateUserProfile :Setting name to " + profileDTO.getName());
-            user.setName(profileDTO.getName());
-            log.info("updateUserProfile :Name set to " + user.getName());
+            user.getProfile().setName(profileDTO.getName());
+            log.info("updateUserProfile :Name set to " + user.getProfile().getName());
         }
         if (profileDTO.getLastName() != null && !profileDTO.getLastName().isEmpty()) {
             log.info("updateUserProfile :Setting lastname to " + profileDTO.getLastName());
-            user.setLastName(profileDTO.getLastName());
-            log.info("updateUserProfile :Lastname set to " + user.getLastName());
+            user.getProfile().setLastName(profileDTO.getLastName());
+            log.info("updateUserProfile :Lastname set to " + user.getProfile().getLastName());
         }
         userRepository.save(user);
         log.info("updateUserProfile :Profile Updated!");
@@ -100,21 +103,20 @@ public class UserService implements UserDetailsService {
         return userRepository.findById(userID)
                 .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND + userID));
     }
+
     public JwtResponse getMyInfo(String email) {
-        User user= userRepository.findUserByEmail(email);
+        log.info("getMyInfo :Getting user " + email + " info...");
+        User user = userRepository.findUserByEmail(email);
         List<String> roles = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
-        Class institutionClass = null;
-
-
-        log.info(user.getPhoto().getId());
         return new JwtResponse(
                 user.getEmail(),
-                user.getName(),
-                user.getLastName(),
+                user.getProfile().getName(),
+                user.getProfile().getLastName(),
                 roles,
-                user.getPhoto() != null ? user.getPhoto().getId() : null
+                user.getProfile().getPhoto() != null ? user.getProfile().getPhoto().getId() : null,
+                user.getSecurity().isTwoFactorAuthEnabled()
         );
     }
 
@@ -137,7 +139,7 @@ public class UserService implements UserDetailsService {
 
     public boolean ValidUser(String email) {
         User user = userRepository.findUserByEmail(email);
-        return !user.getBan() && user.isEnabled();
+        return !user.getSecurity().getBan() && user.isEnabled();
     }
 
 
@@ -181,7 +183,7 @@ public class UserService implements UserDetailsService {
 
     public ResponseEntity<HttpStatus> updatePhoto(MultipartFile file, Principal principal) throws IOException {
         User user = userRepository.findUserByEmail(principal.getName());
-        user.setPhoto(iPhotoService.addPhoto(file));
+        user.getProfile().setPhoto(iPhotoService.addPhoto(file));
         userRepository.save(user);
         log.info("finish update photo");
         return ResponseEntity.ok().build();
@@ -200,5 +202,45 @@ public class UserService implements UserDetailsService {
         }
         return ResponseEntity.badRequest().build();
     }
+    public User getProfById(String id) {
+        return  userRepository.findById(id).orElseThrow(() -> new RuntimeException("Teacher with id " + id + " doesn't exist!"));
+    }
+    public List<Role> getUserRoles(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id " + userId + " doesn't exist!"));
+        return user.getRoles();
+    }
+    public List<User> getProfsByRole() {
+        return  userRepository.findUsersByRoles(Collections.singletonList(TEACHER));
+    }
+    public List<User> findTeachersByNameAndRole(String id,String name, Role role) {
+        return userRepository.findUsersByIdAndRolesContainsAndProfileName(id,TEACHER, name);
+    }
+    public User findTeacherByNameAndRole(String id,String name, Role role) {
+        return userRepository.findUserByIdAndRolesContainsAndProfileName(id,TEACHER, name);
+    }
 
+
+    public User addTeacher(User user) {
+        // Check if the user is a teacher
+        if (!user.getRoles().contains(Role.TEACHER)) {
+            throw new IllegalArgumentException("User must be a teacher");
+        }
+        // Check if the password is null
+        /*if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be null");
+        }
+        // Encode the password
+        user.setPassword(encoder.encode(user.getPassword()));*/
+        // Save the user in the database
+        return userRepository.save(user);
+    }
+
+
+    /* public User addTeacher(User teacher) {
+         return userRepository.save(teacher);
+     }*/
+    public List<User> getTeachers() {
+        return userRepository.findByRolesContains(Role.TEACHER);
+    }
 }

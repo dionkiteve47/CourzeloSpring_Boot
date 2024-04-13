@@ -2,6 +2,7 @@ package tn.esprit.user.services.Implementations;
 
 import tn.esprit.user.dtos.DeviceResDTO;
 import tn.esprit.user.dtos.LoginDTO;
+import tn.esprit.user.dtos.QRCodeResponse;
 import tn.esprit.user.dtos.RecoverPasswordDTO;
 import tn.esprit.user.entities.*;
 import tn.esprit.user.exceptions.*;
@@ -36,7 +37,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.time.Instant;
@@ -44,6 +44,18 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -65,37 +77,71 @@ public class AuthService implements IAuthService {
     @Value("${Security.app.refreshRememberMeExpirationMs}")
     private long refreshRememberMeExpirationMs;
 
-    public ResponseEntity<?> loginUser(LoginDTO loginDTO, @NonNull HttpServletResponse response, String userAgent) {
+    public ResponseEntity<?> loginUser(LoginDTO loginDTO, @NonNull HttpServletResponse response, @NonNull HttpServletRequest request, String userAgent) {
         log.info("Starting Logging in...");
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword()));
             User checkUser = userRepository.findUserByEmail(loginDTO.getEmail());
-            if (!iDeviceMetadataService.isNewDevice(userAgent, checkUser)) {
-                log.info("Finished Logging in...");
-                return authenticateUser(authentication, response, loginDTO);
-            } else {
-                try {
-                    Random random = new Random();
-                    int verificationCode = random.nextInt(9000) + 1000;
-                    VerificationToken verificationToken = new VerificationToken(
-                            String.valueOf(verificationCode),
-                            checkUser,
-                            VerificationTokenType.DEVICE_VERIFICATION
-                    );
-                    verificationTokenRepository.save(verificationToken);
-                    emailService.sendVerificationCode(checkUser, verificationToken);
-                } catch (MessagingException | UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
+            if(!checkUser.getSecurity().isTwoFactorAuthEnabled()) {
+
+                if (!iDeviceMetadataService.isNewDevice(userAgent, checkUser)) {
+                    iDeviceMetadataService.updateDeviceLastLogin(userAgent, checkUser);
+                    log.info("Finished Logging in...");
+                    return authenticateUser(authentication, response, loginDTO);
+                } else {
+                    try {
+                        Random random = new Random();
+                        int verificationCode = random.nextInt(9000) + 1000;
+                        VerificationToken verificationToken = new VerificationToken(
+                                String.valueOf(verificationCode),
+                                checkUser,
+                                VerificationTokenType.DEVICE_VERIFICATION
+                        );
+                        verificationTokenRepository.save(verificationToken);
+                        emailService.sendVerificationCode(checkUser, verificationToken);
+                    } catch (MessagingException | UnsupportedEncodingException e) {
+                        throw new RuntimeException(e);
+                    }
+                    log.info("Finished Logging in...");
+                    return ResponseEntity.status(HttpStatus.OK).body(new DeviceResDTO(true));
                 }
-                log.info("Finished Logging in...");
-                return ResponseEntity.status(HttpStatus.OK).body(new DeviceResDTO(true));
+            }else{
+                log.info("Two Factor Auth Enabled!");
+                return ResponseEntity.status(HttpStatus.OK).body(new Response("Two Factor Authentication Required"));
             }
         } catch (DisabledException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("Please verify your email"));
         } catch (LockedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("Your account has been banned"));
         } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response("Incorrect email or password"));
+        }
+    }
+    public ResponseEntity<?> loginTFA(LoginDTO loginDTO, @NonNull HttpServletResponse response, int verificationCode,String userAgent) {
+        try {
+            log.info("Starting TFA login for user: {}", loginDTO.getEmail());
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword()));
+            log.info("User authenticated, verifying TFA code");
+
+            if(verifyTwoFactorAuth(loginDTO.getEmail(), verificationCode)) {
+                log.info("TFA code verified, authenticating user");
+                User user = userRepository.findUserByEmail(loginDTO.getEmail());
+                iDeviceMetadataService.saveDeviceDetails(userAgent, user);
+                return  authenticateUser(authentication, response, loginDTO);
+            } else {
+                log.warn("Invalid TFA code for user: {}", loginDTO.getEmail());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response("Invalid Verification Code"));
+            }
+        } catch (DisabledException e) {
+            log.error("User email not verified: {}", loginDTO.getEmail(), e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("Please verify your email"));
+        } catch (LockedException e) {
+            log.error("User account is banned: {}", loginDTO.getEmail(), e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new Response("Your account has been banned"));
+        } catch (AuthenticationException e) {
+            log.error("Authentication failed for user: {}", loginDTO.getEmail(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response("Incorrect email or password"));
         }
     }
@@ -113,11 +159,11 @@ public class AuthService implements IAuthService {
 
         if (loginDTO.isRememberMe()) {
             refreshToken = iRefreshTokenService.createRefreshToken(loginDTO.getEmail(), refreshRememberMeExpirationMs);
-            userDetails.setRememberMe(true);
+            userDetails.getSecurity().setRememberMe(true);
             log.info("RememberMe : On");
         } else {
             refreshToken = iRefreshTokenService.createRefreshToken(loginDTO.getEmail(), refreshExpirationMs);
-            userDetails.setRememberMe(false);
+            userDetails.getSecurity().setRememberMe(false);
             log.info("RememberMe : Off");
         }
 
@@ -131,12 +177,15 @@ public class AuthService implements IAuthService {
 
         log.info("Authentication finished!");
 
+
+
         JwtResponse jwtResponse = new JwtResponse(
                 userDetails.getEmail(),
-                userDetails.getName(),
-                userDetails.getLastName(),
+                userDetails.getProfile().getName(),
+                userDetails.getProfile().getLastName(),
                 roles,
-                userDetails.getPhoto() != null ? userDetails.getPhoto().getId() : null
+                userDetails.getProfile().getPhoto() != null ? userDetails.getProfile().getPhoto().getId() : null,
+                userDetails.getSecurity().isTwoFactorAuthEnabled()
         );
 
         return ResponseEntity.ok(jwtResponse);
@@ -170,7 +219,65 @@ public class AuthService implements IAuthService {
         log.info("Started Confirming Device...");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Response("Wrong Verification Code"));
     }
+    public ResponseEntity<?> generateTwoFactorAuthQrCode(String email) {
+        User user = userRepository.findUserByEmail(email);
+        GoogleAuthenticator gAuth = new GoogleAuthenticator();
+        final GoogleAuthenticatorKey key = gAuth.createCredentials();
 
+        user.getSecurity().setTwoFactorAuthKey(key.getKey());
+        userRepository.save(user);
+
+        String qrCodeData = "otpauth://totp/" + email + "?secret=" + key.getKey() + "&issuer=Courzelo";
+        byte[] qrCodeImage;
+        try {
+            qrCodeImage = generateQRCodeImage(qrCodeData, 200, 200);
+        } catch (WriterException | IOException e) {
+            throw new RuntimeException("Could not generate QR code", e);
+        }
+        String qrCodeImageBase64 = Base64.getEncoder().encodeToString(qrCodeImage);
+        return ResponseEntity.ok().body(new QRCodeResponse(qrCodeImageBase64));
+    }
+    public ResponseEntity<?> enableTwoFactorAuth(String email,String verificationCode){
+        User user = userRepository.findUserByEmail(email);
+        if (verifyTwoFactorAuth(email, Integer.parseInt(verificationCode))) {
+            user.getSecurity().setTwoFactorAuthEnabled(true);
+            userRepository.save(user);
+            return ResponseEntity.ok().body(new Response("Two Factor Authentication Enabled"));
+        }
+        return ResponseEntity.badRequest().body(new Response("Invalid Verification Code"));
+    }
+    public void disableTwoFactorAuth(String email){
+        User user = userRepository.findUserByEmail(email);
+        user.getSecurity().setTwoFactorAuthKey(null);
+        user.getSecurity().setTwoFactorAuthEnabled(false);
+        userRepository.save(user);
+    }
+    public boolean verifyTwoFactorAuth(String email, int verificationCode) {
+        log.info("Starting TFA verification for user: {}", email);
+        User user = userRepository.findUserByEmail(email);
+        if(user == null) {
+            log.warn("User not found: {}", email);
+            return false;
+        }
+        GoogleAuthenticator gAuth = new GoogleAuthenticator();
+        boolean isCodeValid = gAuth.authorize(user.getSecurity().getTwoFactorAuthKey(), verificationCode);
+        if(isCodeValid) {
+            log.info("TFA code verified for user: {}", email);
+        } else {
+            log.warn("Invalid TFA code {} for user: {}", verificationCode ,email);
+        }
+        return isCodeValid;
+    }
+    public byte[] generateQRCodeImage(String text, int width, int height) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        Map<EncodeHintType, ErrorCorrectionLevel> hints = new HashMap<>();
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+        BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height, hints);
+
+        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        return pngOutputStream.toByteArray();
+    }
 
     public ResponseEntity<Response> verifyAccount(String code) {
         log.info("Started Verifying...");
@@ -190,7 +297,7 @@ public class AuthService implements IAuthService {
         User user = userRepository.findUserById(verificationToken.getUser().getId());
         if (user != null) {
             log.info(user.getEmail());
-            user.setEnabled(true);
+            user.getSecurity().setEnabled(true);
             userRepository.save(user);
             log.info("Finished Verifying...");
             return ResponseEntity.status(HttpStatus.OK).body(new Response("Account Verified"));
@@ -200,11 +307,12 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public ResponseEntity<Boolean> isAuthenticated(@NonNull HttpServletRequest request) {
-        String accessToken = cookieUtil.getAccessTokenFromCookies(request);
-        if (accessToken != null && jwtUtils.validateJwtToken(accessToken)) {
+    public ResponseEntity<Boolean> isAuthenticated(Principal principal) {
+        if (principal != null) {
+            log.info("User authenticated");
             return ResponseEntity.ok().body(true);
         }
+        log.info("User not authenticated");
         return ResponseEntity.ok().body(false);
     }
 
@@ -270,8 +378,9 @@ public class AuthService implements IAuthService {
         }
         user.setPassword(encoder.encode(user.getPassword()));
         user.getRoles().add(Role.STUDENT);
-        user.setEnabled(false);
-        user.setBan(false);
+        user.getSecurity().setEnabled(false);
+        user.getSecurity().setBan(false);
+        user.getSecurity().setTwoFactorAuthEnabled(false);
         userRepository.save(user);
         String randomCode = RandomString.make(64);
         VerificationToken verificationToken = new VerificationToken(
@@ -309,4 +418,5 @@ public class AuthService implements IAuthService {
         log.info("refreshToken :Access token created!");
         log.info("refreshToken :Refreshing token DONE!");
     }
+
 }

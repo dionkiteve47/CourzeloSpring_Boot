@@ -1,10 +1,9 @@
 package tn.esprit.user.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -14,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-
+@NoArgsConstructor
 @Data
 @Document(collection = "users")
 public class User implements UserDetails {
@@ -25,24 +24,22 @@ public class User implements UserDetails {
     @NotNull
     private String password;
     @NotNull
-    private String name;
-    @NotNull
-    private String lastName;
-    @NotNull
     private List<Role> roles = new ArrayList<>();
-    @DBRef
-    private Photo photo;
-    private boolean enabled;
-    private Boolean ban;
-    private boolean rememberMe;
-
+    private UserSecurity security = new UserSecurity();
+    private UserProfile profile = new UserProfile();
+    private UserActivity activity = new UserActivity();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream().map(role1 -> new SimpleGrantedAuthority("ROLE_" + role1.name())).toList();
     }
 
-
+    public User(String email, String password, String name, String lastName) {
+        this.email = email;
+        this.password = password;
+        this.profile.setName(name);
+        this.profile.setLastName(lastName);
+    }
 
     @Override
     public String getUsername() {
@@ -56,7 +53,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return !ban;
+        return !security.getBan();
     }
 
     @Override
@@ -66,7 +63,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return enabled;
+        return security.isEnabled();
     }
 
     @Override

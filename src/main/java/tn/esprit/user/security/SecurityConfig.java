@@ -63,7 +63,24 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()
+                        .requestMatchers("/api/Modules/**")
+                        .permitAll()
+                        .requestMatchers("/api/v1/institution/**")
+                        .permitAll()
+                        .requestMatchers("/api/v1/class/**")
+                        .permitAll()
+                        .requestMatchers("/api/data/**")
+                        .permitAll()
+                        .requestMatchers("/api/TimeTable/**")
+                        .permitAll()
+                        .requestMatchers("/api/v1/class/getClassUsers/Teacher")
+                        .permitAll()
+                        .requestMatchers("/api/pdf/classes/**")
+                        .permitAll()
+                        .requestMatchers("/api/elementModules/**")
+                        .permitAll()
                         .anyRequest().authenticated());
+
         http.authenticationProvider(authenticationProvider());
 
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);

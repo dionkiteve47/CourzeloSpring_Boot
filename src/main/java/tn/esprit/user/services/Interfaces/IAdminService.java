@@ -1,6 +1,5 @@
 package tn.esprit.user.services.Interfaces;
 
-import tn.esprit.user.dtos.UserDTO;
 import tn.esprit.user.dtos.UserListDTO;
 import tn.esprit.user.security.Response;
 import org.springframework.http.ResponseEntity;

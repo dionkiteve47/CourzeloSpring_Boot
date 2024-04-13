@@ -19,17 +19,26 @@ public interface IAuthService {
 
     ResponseEntity<?> confirmDevice(String userAgent, HttpServletResponse response, LoginDTO loginDTO, Integer code);
 
-    ResponseEntity<?> loginUser(LoginDTO loginDTO, HttpServletResponse response, String userAgent);
+    ResponseEntity<?> loginUser(LoginDTO loginDTO, HttpServletResponse response, HttpServletRequest request, String userAgent);
+    ResponseEntity<?> loginTFA(LoginDTO loginDTO,HttpServletResponse response, int verificationCode,String userAgent);
 
     void logout(HttpServletResponse response);
 
     ResponseEntity<Response> verifyAccount(String code);
 
-    ResponseEntity<Boolean> isAuthenticated(HttpServletRequest request);
+    ResponseEntity<Boolean> isAuthenticated(Principal principal);
 
     ResponseEntity<List<Role>> getRole(Principal principal);
 
     ResponseEntity<Response> forgotPassword(String email) throws MessagingException, UnsupportedEncodingException;
 
     ResponseEntity<Response> recoverPassword(String token, RecoverPasswordDTO passwordDTO);
+
+    void disableTwoFactorAuth(String email);
+
+    ResponseEntity<?> enableTwoFactorAuth(String email, String verificationCode);
+
+    ResponseEntity<?> generateTwoFactorAuthQrCode(String email);
+
+    boolean verifyTwoFactorAuth(String email, int verificationCode);
 }
