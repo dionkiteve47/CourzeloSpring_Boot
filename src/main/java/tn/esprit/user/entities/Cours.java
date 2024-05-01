@@ -1,13 +1,13 @@
 package tn.esprit.user.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.*;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+
+import java.util.*;
 
 @Data
 @NoArgsConstructor
@@ -39,4 +39,11 @@ public class Cours {
 
     @Column(columnDefinition = "int default 0")
     private int dislikes;
+
+    @ElementCollection
+    private Set<String> likedBy = new HashSet<>();
+
+    @ElementCollection
+    private Set<String> dislikedBy = new HashSet<>();
+
 }

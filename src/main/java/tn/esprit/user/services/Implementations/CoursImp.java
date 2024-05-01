@@ -301,6 +301,55 @@ public class CoursImp implements ICoursService {
             throw new IllegalArgumentException("Invalid sort order: " + sortOrder);
         }
     }
+
+
+    public void likeOrDislikeCours(String userId, String coursId, String action) {
+        // Retrieve the course by its ID
+        Cours cours = coursRepository.findById(coursId)
+                .orElseThrow(() -> new RuntimeException("Course not found with ID: " + coursId));
+
+        // Check if the user has already liked or disliked the course
+        boolean alreadyLiked = cours.getLikedBy().contains(userId);
+        boolean alreadyDisliked = cours.getDislikedBy().contains(userId);
+
+        if (action.equals("like")) {
+            if (!alreadyLiked) {
+                // If user hasn't already liked, increment likes
+                cours.setLikes(cours.getLikes() + 1);
+                cours.getLikedBy().add(userId);
+
+                // If user previously disliked, decrement dislikes
+                if (alreadyDisliked) {
+                    cours.setDislikes(cours.getDislikes() - 1);
+                    cours.getDislikedBy().remove(userId);
+                }
+                coursRepository.save(cours);
+            } else {
+                throw new RuntimeException("User already liked this course.");
+            }
+        } else if (action.equals("dislike")) {
+            if (!alreadyDisliked) {
+                // If user hasn't already disliked, increment dislikes
+                cours.setDislikes(cours.getDislikes() + 1);
+                cours.getDislikedBy().add(userId);
+
+                // If user previously liked, decrement likes
+                if (alreadyLiked) {
+                    cours.setLikes(cours.getLikes() - 1);
+                    cours.getLikedBy().remove(userId);
+                }
+                coursRepository.save(cours);
+            } else {
+                throw new RuntimeException("User already disliked this course.");
+            }
+        } else {
+            throw new IllegalArgumentException("Invalid action provided.");
+        }
+    }
+
+
+
+
 }
 
 

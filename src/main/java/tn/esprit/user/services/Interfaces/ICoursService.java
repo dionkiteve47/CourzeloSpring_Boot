@@ -28,4 +28,7 @@ public interface ICoursService {
     List<Cours> getAllCoursSortedByPrice(String sortOrder);
     void generatePdf(String fileName, Long amount) throws DocumentException, IOException, URISyntaxException;
 
-}
+    public void likeOrDislikeCours(String userId, String coursId, String action);
+
+
+    }

@@ -320,34 +320,16 @@ public class CoursController {
         }
     }
 
-    @PostMapping("/like/{id_cours}")
-    public ResponseEntity<?> likeCours(@PathVariable String id_cours) {
-        Cours cours = iCoursService.getCoursById(id_cours);
-        if (cours != null) {
-            log.info("Before updating likes: {}", cours.getLikes());
-
-            cours.setLikes(cours.getLikes() + 1); // Augmentez le compteur de likes
-            // Augmentez le compteur de likes
-            log.info("After updating likes: {}", cours.getLikes());
-
-            iCoursService.updateCours(id_cours,cours); // Mettez à jour le cours dans la base de données
-            return ResponseEntity.ok().body("{\"message\": \"Le cours a été liké avec succès !\"}");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"error\": \"Le cours avec l'ID " + id_cours + " n'a pas été trouvé !\"}");
+    @PostMapping("/{action}/{id_cours}/{user_id}")
+    public ResponseEntity<?> likeOrDislikeCours(@PathVariable String action, @PathVariable String id_cours, @PathVariable String user_id) {
+        try {
+            iCoursService.likeOrDislikeCours(user_id, id_cours, action);
+            return ResponseEntity.ok().body("{\"message\": \"Course " + action + "d successfully!\"}");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
 
-    @PostMapping("/dislike/{id_cours}")
-    public ResponseEntity<?> dislikeCours(@PathVariable String id_cours) {
-        Cours cours = iCoursService.getCoursById(id_cours);
-        if (cours != null) {
-            cours.setDislikes(cours.getDislikes() + 1); // Augmentez le compteur de dislikes
-            iCoursService.updateCours(id_cours,cours); // Mettez à jour le cours dans la base de données
-            return ResponseEntity.ok().body("{\"message\": \"Le cours a été disliké avec succès !\"}");
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"error\": \"Le cours avec l'ID " + id_cours + " n'a pas été trouvé !\"}");
-        }
-    }
      @GetMapping("/sortByPrice")
     public List<Cours> getAllCoursSortedByPrice(@RequestParam(required = false, defaultValue = "asc") String sortOrder) {
         return iCoursService.getAllCoursSortedByPrice(sortOrder);

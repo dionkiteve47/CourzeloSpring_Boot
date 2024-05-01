@@ -10,7 +10,7 @@ import tn.esprit.user.services.Interfaces.IService;
 
 import java.util.List;
 import java.util.Optional;
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:4200/", maxAge = 3600, allowedHeaders = "*", allowCredentials = "true")
 @RestController
 @RequestMapping("/article")
 public class ArticleController {
