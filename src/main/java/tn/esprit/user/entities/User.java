@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.TextScore;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,14 +22,23 @@ public class User implements UserDetails {
     @Id
     private String id;
     @NotNull
+    @TextIndexed(weight = 1)
     private String email;
     @NotNull
     private String password;
     @NotNull
+    @TextIndexed(weight = 2)
     private List<Role> roles = new ArrayList<>();
     private UserSecurity security = new UserSecurity();
+    @TextIndexed(weight = 3)
     private UserProfile profile = new UserProfile();
+    @TextIndexed
+    private UserEducationalDetails education = new UserEducationalDetails();
+    private UserContact contact = new UserContact();
     private UserActivity activity = new UserActivity();
+    private UserSettings settings = new UserSettings();
+    @TextScore
+    private Float score;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -79,4 +90,3 @@ public class User implements UserDetails {
                 Objects.equals(email, user.email);
     }
 }
-

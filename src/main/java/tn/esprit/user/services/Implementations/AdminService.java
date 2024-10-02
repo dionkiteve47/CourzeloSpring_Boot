@@ -92,6 +92,7 @@ public class AdminService implements IAdminService {
         log.info("Getting all users");
         try {
             if (page < 0 || sizePerPage <= 0) {
+                log.info("Invalid page or sizePerPage");
                 return ResponseEntity.badRequest().build();
             }
 
@@ -104,7 +105,18 @@ public class AdminService implements IAdminService {
 
             List<UserDTO> userDTOList = userRepository.findAll(pageable)
                     .stream()
-                    .map(user -> modelMapper.map(user, UserDTO.class))
+                    .map(user -> new UserDTO(
+                            user.getId(),
+                            user.getEmail(),
+                            user.getRoles().stream().map(Role::name).toList(),
+                            user.getSecurity(),
+                            user.getProfile(),
+                            user.getEducation(),
+                            user.getContact(),
+                            user.getActivity(),
+                            user.getSettings(),
+                            user.getScore()
+                    ))
                     .toList();
 
             log.info("Users in page {}: {}", page, userDTOList);

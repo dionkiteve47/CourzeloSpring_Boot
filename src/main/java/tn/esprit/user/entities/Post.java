@@ -33,4 +33,13 @@ public class Post {
     private Date createdAt;
     private Date updatedAt;
 
+
+    private String id ;
+    private String description ;
+    private String userId ;
+
+    private byte[] img ;
+    private List<Commentaire> comments ;
+
+
 }

@@ -1,5 +1,6 @@
 package tn.esprit.user.controllers;
 
+import tn.esprit.user.dtos.UserDTO;
 import tn.esprit.user.dtos.UserListDTO;
 import tn.esprit.user.security.JwtResponse;
 import tn.esprit.user.security.Response;
@@ -30,32 +31,31 @@ public class AdminController {
         return iAdminService.getUsers(page, sizePerPage);
     }
     @GetMapping("/userInfo")
-    public ResponseEntity<JwtResponse> getUserInfo(@RequestParam String email) {
-        JwtResponse jwtResponse = userService.getMyInfo(email);
+    public ResponseEntity<UserDTO> getUserInfo(@RequestParam String email) {
         return ResponseEntity.ok()
-                .body(jwtResponse);
+                .body(userService.getMyInfo(email));
     }
 
     @PostMapping("/add/{userID}/{role}")
-    @CacheEvict(value = "UsersList", allEntries = true)
+    @CacheEvict(value = {"UsersList", "MyInfo", "AnotherCache"}, allEntries = true)
     public ResponseEntity<Response> addRole(@PathVariable String userID, @PathVariable String role) {
         return iAdminService.addRole(role, userID);
     }
 
     @PostMapping("/remove/{userID}/{role}")
-    @CacheEvict(value = "UsersList", allEntries = true)
+    @CacheEvict(value = {"UsersList", "MyInfo", "AnotherCache"}, allEntries = true)
     public ResponseEntity<Response> removeRole(@PathVariable String userID, @PathVariable String role) {
         return iAdminService.removeRole(role, userID);
     }
 
     @PostMapping("/ban/{userID}")
-    @CacheEvict(value = "UsersList", allEntries = true)
+    @CacheEvict(value = {"UsersList", "MyInfo", "AnotherCache"}, allEntries = true)
     public ResponseEntity<Response> toggleBan(@PathVariable String userID) {
         return iAdminService.toggleBan(userID);
     }
 
     @PostMapping("/enable/{userID}")
-    @CacheEvict(value = "UsersList", allEntries = true)
+    @CacheEvict(value = {"UsersList", "MyInfo", "AnotherCache"}, allEntries = true)
     public ResponseEntity<Response> toggleEnable(@PathVariable String userID) {
         return iAdminService.toggleEnable(userID);
     }

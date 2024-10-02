@@ -22,8 +22,7 @@ public interface IAuthService {
     ResponseEntity<?> loginUser(LoginDTO loginDTO, HttpServletResponse response, HttpServletRequest request, String userAgent);
     ResponseEntity<?> loginTFA(LoginDTO loginDTO,HttpServletResponse response, int verificationCode,String userAgent);
 
-    void logout(HttpServletResponse response);
-
+    void logout(HttpServletResponse response,Principal principal);
     ResponseEntity<Response> verifyAccount(String code);
 
     ResponseEntity<Boolean> isAuthenticated(Principal principal);

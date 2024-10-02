@@ -54,8 +54,6 @@ public class QuizController {
     public Integer  submitQuiz(@PathVariable String _id, @RequestParam String userId, @RequestBody List<Response> responses) {
        return   quizService.submitQuiz(userId, _id, responses).getBody();
 
-
-
     }
 
     @GetMapping("/quizzez/{_id}")

@@ -1,13 +1,19 @@
 package tn.esprit.user.services.Implementations;
 
+
 import tn.esprit.user.dtos.DeviceResDTO;
 import tn.esprit.user.dtos.LoginDTO;
 import tn.esprit.user.dtos.QRCodeResponse;
 import tn.esprit.user.dtos.RecoverPasswordDTO;
+import tn.esprit.user.entities.institution.Class;
+import tn.esprit.user.entities.institution.Institution;
 import tn.esprit.user.entities.*;
+import tn.esprit.user.exceptions.ClassNotFoundException;
 import tn.esprit.user.exceptions.*;
-import tn.esprit.user.repositories.VerificationTokenRepository;
+import tn.esprit.user.repositories.ClassRepository;
+import tn.esprit.user.repositories.InstitutionRepository;
 import tn.esprit.user.repositories.UserRepository;
+import tn.esprit.user.repositories.VerificationTokenRepository;
 import tn.esprit.user.security.JwtResponse;
 import tn.esprit.user.security.Response;
 import tn.esprit.user.security.jwt.JWTUtils;
@@ -15,6 +21,16 @@ import tn.esprit.user.services.Interfaces.IAuthService;
 import tn.esprit.user.services.Interfaces.IDeviceMetadataService;
 import tn.esprit.user.services.Interfaces.IRefreshTokenService;
 import tn.esprit.user.utils.CookieUtil;
+import tn.esprit.user.utils.GeoIPService;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,24 +53,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
-import java.util.UUID;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.warrenstrange.googleauth.GoogleAuthenticator;
-import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -65,11 +69,14 @@ public class AuthService implements IAuthService {
     private final PasswordEncoder encoder;
     private final IRefreshTokenService iRefreshTokenService;
     private final AuthenticationManager authenticationManager;
+    private final InstitutionRepository institutionRepository;
     private final VerificationTokenRepository verificationTokenRepository;
+    private final ClassRepository classRepository;
     private final JWTUtils jwtUtils;
     private final CookieUtil cookieUtil;
     private final EmailService emailService;
     private final IDeviceMetadataService iDeviceMetadataService;
+    private final GeoIPService geoIPService;
     @Value("${Security.app.jwtExpirationMs}")
     private long jwtExpirationMs;
     @Value("${Security.app.refreshExpirationMs}")
@@ -84,6 +91,12 @@ public class AuthService implements IAuthService {
                     new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword()));
             User checkUser = userRepository.findUserByEmail(loginDTO.getEmail());
             if(!checkUser.getSecurity().isTwoFactorAuthEnabled()) {
+                String ip = iDeviceMetadataService.getIpAddressFromHeader(request);
+                log.info("ip :" + request.getRemoteAddr());
+                log.info("host :" + request.getRemoteHost());
+                log.info("user :" + request.getRemoteUser());
+                String city = geoIPService.cityName(ip);
+                log.info("city :" + city);
 
                 if (!iDeviceMetadataService.isNewDevice(userAgent, checkUser)) {
                     iDeviceMetadataService.updateDeviceLastLogin(userAgent, checkUser);
@@ -156,7 +169,8 @@ public class AuthService implements IAuthService {
 
         User userDetails = (User) authentication.getPrincipal();
         RefreshToken refreshToken = null;
-
+        userDetails.getActivity().setLastLogin(Instant.now());
+        userDetails.getActivity().setLoginCount(userDetails.getActivity().getLoginCount() + 1);
         if (loginDTO.isRememberMe()) {
             refreshToken = iRefreshTokenService.createRefreshToken(loginDTO.getEmail(), refreshRememberMeExpirationMs);
             userDetails.getSecurity().setRememberMe(true);
@@ -170,25 +184,7 @@ public class AuthService implements IAuthService {
         response.addHeader(HttpHeaders.SET_COOKIE, cookieUtil.createRefreshTokenCookie(refreshToken.getToken(), loginDTO.isRememberMe() ? refreshRememberMeExpirationMs : refreshExpirationMs).toString());
 
         userRepository.save(userDetails);
-
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        log.info("Authentication finished!");
-
-
-
-        JwtResponse jwtResponse = new JwtResponse(
-                userDetails.getEmail(),
-                userDetails.getProfile().getName(),
-                userDetails.getProfile().getLastName(),
-                roles,
-                userDetails.getProfile().getPhoto() != null ? userDetails.getProfile().getPhoto().getId() : null,
-                userDetails.getSecurity().isTwoFactorAuthEnabled()
-        );
-
-        return ResponseEntity.ok(jwtResponse);
+        return ResponseEntity.ok().build();
     }
 
 
@@ -241,6 +237,7 @@ public class AuthService implements IAuthService {
         User user = userRepository.findUserByEmail(email);
         if (verifyTwoFactorAuth(email, Integer.parseInt(verificationCode))) {
             user.getSecurity().setTwoFactorAuthEnabled(true);
+            user.getActivity().setUpdatedAt(Instant.now());
             userRepository.save(user);
             return ResponseEntity.ok().body(new Response("Two Factor Authentication Enabled"));
         }
@@ -250,6 +247,7 @@ public class AuthService implements IAuthService {
         User user = userRepository.findUserByEmail(email);
         user.getSecurity().setTwoFactorAuthKey(null);
         user.getSecurity().setTwoFactorAuthEnabled(false);
+        user.getActivity().setUpdatedAt(Instant.now());
         userRepository.save(user);
     }
     public boolean verifyTwoFactorAuth(String email, int verificationCode) {
@@ -298,6 +296,7 @@ public class AuthService implements IAuthService {
         if (user != null) {
             log.info(user.getEmail());
             user.getSecurity().setEnabled(true);
+            user.getActivity().setUpdatedAt(Instant.now());
             userRepository.save(user);
             log.info("Finished Verifying...");
             return ResponseEntity.status(HttpStatus.OK).body(new Response("Account Verified"));
@@ -308,12 +307,12 @@ public class AuthService implements IAuthService {
 
     @Override
     public ResponseEntity<Boolean> isAuthenticated(Principal principal) {
-        if (principal != null) {
-            log.info("User authenticated");
+      /*  if (principal != null) {
+            log.info("User authenticated"); */
             return ResponseEntity.ok().body(true);
-        }
+       /* }
         log.info("User not authenticated");
-        return ResponseEntity.ok().body(false);
+        return ResponseEntity.ok().body(false); */
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -362,6 +361,7 @@ public class AuthService implements IAuthService {
             throw new UserNotFoundException("User Not Found with id " + verificationToken.getUser().getId());
         }
         user.setPassword(encoder.encode(passwordDTO.getPassword()));
+        user.getActivity().setUpdatedAt(Instant.now());
         userRepository.save(user);
         verificationTokenRepository.delete(verificationToken);
         return ResponseEntity
@@ -381,6 +381,8 @@ public class AuthService implements IAuthService {
         user.getSecurity().setEnabled(false);
         user.getSecurity().setBan(false);
         user.getSecurity().setTwoFactorAuthEnabled(false);
+        user.getActivity().setCreatedAt(Instant.now());
+        user.getActivity().setLoginCount(0);
         userRepository.save(user);
         String randomCode = RandomString.make(64);
         VerificationToken verificationToken = new VerificationToken(
@@ -401,7 +403,8 @@ public class AuthService implements IAuthService {
                 .body(new Response("Account Created!"));
     }
 
-    public void logout(@NonNull HttpServletResponse response) {
+    public void logout(@NonNull HttpServletResponse response ,Principal principal) {
+        User user = userRepository.findUserByEmail(principal.getName());
         log.info("Logout :Logging out...");
         response.addHeader(HttpHeaders.SET_COOKIE, cookieUtil.createAccessTokenCookie("accessToken", 0L).toString());
         log.info("Logout: Access Token removed");
@@ -409,6 +412,8 @@ public class AuthService implements IAuthService {
         log.info("Logout :Refresh Token removed");
         SecurityContextHolder.clearContext();
         log.info("Logout :Security context cleared!");
+        user.getActivity().setLastLogout(Instant.now());
+        userRepository.save(user);
         log.info("Logout :Logout Finished!");
     }
 

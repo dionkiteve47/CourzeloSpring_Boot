@@ -56,7 +56,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 "/api/v1/auth/signingTFA",
                 "/api/v1/auth/verifyTwoFactorAuth",
                 "/api/v1/auth/signup",
-                "/api/v1/auth/logout",
                 "/api/v1/auth/refreshToken",
                 "/api/v1/auth/verify",
                 "/api/v1/auth/confirmDevice/",

@@ -31,7 +31,7 @@ public class QuizService {
     QuizSubmissionRepository quizSubmissionRepository;
     @Autowired
     QuizStatisticsRepository quizStatisticsRepository;
-    private final String baseUrl = "http://localhost:9098/quiz"; // Base URL for the quiz service API
+    private final String baseUrl = "http://localhost:8089/quiz"; // Base URL for the quiz service API
     private RestTemplate restTemplate;
 
     public ResponseEntity<String> createQuiz(String category, Integer numQ, String title) {
@@ -81,15 +81,6 @@ public class QuizService {
         return ResponseEntity.ok(score);
     }
 
-//    public ResponseEntity<List<QuizWrapper>> getQuizzesByCategory(String category) {
-//        List<Quiz> quizzes = quizDao.findByCategory(category);
-//        List<QuizWrapper> quizWrappers = new ArrayList<>();
-//        for (Quiz quiz : quizzes) {
-//            QuizWrapper quizWrapper = new QuizWrapper(quiz.get_id(), quiz.getTitle(), quiz.getCategory());
-//            quizWrappers.add(quizWrapper);
-//        }
-//        return ResponseEntity.ok(quizWrappers);
-//    }
 
     public ResponseEntity<List<QuizWrapper>> getAllQuizzes() {
         List<Quiz> quizzes = quizDao.findAll();
