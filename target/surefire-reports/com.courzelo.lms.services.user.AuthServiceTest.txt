@@ -1,0 +1,28 @@
+-------------------------------------------------------------------------------
+Test set: com.courzelo.lms.services.user.AuthServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 3, Skipped: 0, Time elapsed: 3.985 s <<< FAILURE! -- in com.courzelo.lms.services.user.AuthServiceTest
+com.courzelo.lms.services.user.AuthServiceTest.refreshTokenCreatesNewAccessToken -- Time elapsed: 3.712 s <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "org.springframework.http.ResponseCookie.toString()" because the return value of "tn.esprit.user.utils.CookieUtil.createAccessTokenCookie(String, java.lang.Long)" is null
+	at tn.esprit.user.services.Implementations.AuthService.refreshToken(AuthService.java:422)
+	at com.courzelo.lms.services.user.AuthServiceTest.refreshTokenCreatesNewAccessToken(AuthServiceTest.java:92)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+com.courzelo.lms.services.user.AuthServiceTest.saveUserShouldReturnOkWhenUserIsSavedSuccessfully -- Time elapsed: 0.009 s <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "org.springframework.security.crypto.password.PasswordEncoder.encode(java.lang.CharSequence)" because "this.encoder" is null
+	at tn.esprit.user.services.Implementations.AuthService.saveUser(AuthService.java:379)
+	at com.courzelo.lms.services.user.AuthServiceTest.saveUserShouldReturnOkWhenUserIsSavedSuccessfully(AuthServiceTest.java:79)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+com.courzelo.lms.services.user.AuthServiceTest.refreshTokenLogsCorrectMessages -- Time elapsed: 0.022 s <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "org.springframework.http.ResponseCookie.toString()" because the return value of "tn.esprit.user.utils.CookieUtil.createAccessTokenCookie(String, java.lang.Long)" is null
+	at tn.esprit.user.services.Implementations.AuthService.refreshToken(AuthService.java:422)
+	at com.courzelo.lms.services.user.AuthServiceTest.refreshTokenLogsCorrectMessages(AuthServiceTest.java:102)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
