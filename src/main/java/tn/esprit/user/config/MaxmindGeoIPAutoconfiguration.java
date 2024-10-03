@@ -1,6 +1,6 @@
 package tn.esprit.user.config;
 
-import tn.esprit.user.utils.GeoIPService;
+/*import tn.esprit.user.utils.GeoIPService;
 import com.maxmind.geoip2.DatabaseReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,4 +26,4 @@ public class MaxmindGeoIPAutoconfiguration {
         return new GeoIPService(geoIpDatabaseReader());
     }
 
-}
+} */

@@ -21,7 +21,7 @@ import tn.esprit.user.services.Interfaces.IAuthService;
 import tn.esprit.user.services.Interfaces.IDeviceMetadataService;
 import tn.esprit.user.services.Interfaces.IRefreshTokenService;
 import tn.esprit.user.utils.CookieUtil;
-import tn.esprit.user.utils.GeoIPService;
+//import tn.esprit.user.utils.GeoIPService;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
@@ -76,7 +76,7 @@ public class AuthService implements IAuthService {
     private final CookieUtil cookieUtil;
     private final EmailService emailService;
     private final IDeviceMetadataService iDeviceMetadataService;
-    private final GeoIPService geoIPService;
+    //private final GeoIPService geoIPService;
     @Value("${Security.app.jwtExpirationMs}")
     private long jwtExpirationMs;
     @Value("${Security.app.refreshExpirationMs}")
@@ -95,8 +95,8 @@ public class AuthService implements IAuthService {
                 log.info("ip :" + request.getRemoteAddr());
                 log.info("host :" + request.getRemoteHost());
                 log.info("user :" + request.getRemoteUser());
-                String city = geoIPService.cityName(ip);
-                log.info("city :" + city);
+              //  String city = geoIPService.cityName(ip);
+             //   log.info("city :" + city);
 
                 if (!iDeviceMetadataService.isNewDevice(userAgent, checkUser)) {
                     iDeviceMetadataService.updateDeviceLastLogin(userAgent, checkUser);

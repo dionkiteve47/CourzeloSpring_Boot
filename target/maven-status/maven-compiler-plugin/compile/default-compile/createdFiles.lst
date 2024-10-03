@@ -145,7 +145,6 @@ tn\esprit\user\dtos\UserProfileDTO.class
 tn\esprit\user\config\OpenAIConfig.class
 tn\esprit\user\entities\VerificationTokenType.class
 tn\esprit\user\config\WebConfig$1.class
-tn\esprit\user\utils\GeoIPService.class
 tn\esprit\user\entities\enumeration\TypeProgramme.class
 tn\esprit\user\entities\Search.class
 tn\esprit\user\services\Implementations\LoadFromExcelToDB.class
@@ -197,7 +196,6 @@ tn\esprit\user\entities\Reservation.class
 tn\esprit\user\exceptions\ClassNotFoundException.class
 tn\esprit\user\services\Implementations\QuizScheduleService.class
 tn\esprit\user\controllers\QuestionController.class
-tn\esprit\user\config\MaxmindGeoIPProperties.class
 tn\esprit\user\entities\Question.class
 tn\esprit\user\services\Implementations\ServicesImp.class
 tn\esprit\user\entities\Matiere$MatiereBuilder.class
@@ -269,7 +267,6 @@ tn\esprit\user\repositories\DeviceMetadataRepository.class
 tn\esprit\user\repositories\RessourceRepository.class
 tn\esprit\user\repositories\ModulRepository.class
 tn\esprit\user\services\Implementations\EmailSenderService.class
-tn\esprit\user\config\MaxmindGeoIPAutoconfiguration.class
 tn\esprit\user\entities\QuizSchedule.class
 tn\esprit\user\entities\schedule\Semester.class
 tn\esprit\user\entities\Badge.class

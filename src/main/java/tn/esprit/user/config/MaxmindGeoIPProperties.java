@@ -1,6 +1,6 @@
 package tn.esprit.user.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+/*import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.io.Resource;
 
 @ConfigurationProperties(prefix = MaxmindGeoIPProperties.PROPERTY_PREFIX)
@@ -27,4 +27,4 @@ public class MaxmindGeoIPProperties {
     public void setGeolite2CityMmdb(Resource geolite2CityMmdb) {
         this.geolite2CityMmdb = geolite2CityMmdb;
     }
-}
+} */
