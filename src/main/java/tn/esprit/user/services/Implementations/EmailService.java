@@ -37,7 +37,7 @@ public class EmailService {
     public void sendPasswordChangeEmail(User user, VerificationToken verificationToken)
             throws MessagingException, UnsupportedEncodingException {
         String toAddress = user.getEmail();
-        String fromAddress = "elmejri.sami@gmail.com";
+        String fromAddress = "samibacinfo2@gmail.com";
         String senderName = "Courzelo";
         String subject = "Password Change Request";
         String content = "<!DOCTYPE html>" +
@@ -93,7 +93,7 @@ public class EmailService {
     public void sendVerificationEmail(User user,VerificationToken verificationToken)
             throws MessagingException, UnsupportedEncodingException {
         String toAddress = user.getEmail();
-        String fromAddress = "elmejri.sami@gmail.com";
+        String fromAddress = "samibacinfo2@gmail.com";
         String senderName = "Courzelo";
         String subject = "Please verify your registration";
         String content = "<!DOCTYPE html>" +
@@ -149,7 +149,7 @@ public class EmailService {
     public void sendVerificationCode(User user,VerificationToken verificationToken)
             throws MessagingException, UnsupportedEncodingException {
         String toAddress = user.getEmail();
-        String fromAddress = "elmejri.sami@gmail.com";
+        String fromAddress = "samibacinfo2@gmail.com";
         String senderName = "Courzelo";
         String subject = "Please verify your registration";
         String content = "<!DOCTYPE html>\n" +

@@ -17,8 +17,8 @@ public class MailConfigurations {
         mailSender.setPort(587); // Use 465 if using SSL
 
         // Replace with your app-specific password if needed
-        mailSender.setUsername("sami.elmejri@esprit.tn");
-        mailSender.setPassword("wjhm ixvn xgmi otvf");
+        mailSender.setUsername("elmejri.sami@gmail.com");
+        mailSender.setPassword("rhzb flwv krgh iway");
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
