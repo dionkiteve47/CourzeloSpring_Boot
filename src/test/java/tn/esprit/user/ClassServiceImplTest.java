@@ -24,5 +24,6 @@ public class ClassServiceImplTest {
         // Ensure listUsers is not null before checking the size
         Assertions.assertNotNull(listUsers, "The list of users should not be null");
         Assertions.assertEquals(3, listUsers.size());
+
     }
 }
